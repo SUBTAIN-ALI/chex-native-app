@@ -76,7 +76,6 @@ const CaptureImageModal = ({
   return (
     <Modal
       animationType="slide"
-      navigationBarTranslucent={true}
       statusBarTranslucent
       transparent={true}
       visible={modalVisible}

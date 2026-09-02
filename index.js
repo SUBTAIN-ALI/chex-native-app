@@ -17,7 +17,9 @@ const InitializeRedux = () => (
   <Provider store={store}>
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <PersistGate persistor={persistor}>
-        <KeyboardProvider navigationBarTranslucent>
+        {/* Do not enable `navigationBarTranslucent`: it makes the RN root draw under the
+            Android navigation bar, which hides bottom UI on 3-button navigation. */}
+        <KeyboardProvider>
           <App />
         </KeyboardProvider>
       </PersistGate>
