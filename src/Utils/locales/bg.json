@@ -383,7 +383,9 @@
     "alertMessage": "Моля, маркирайте щетата и изберете ниво на сериозност, за да продължите. И двете са задължителни.",
     "uploading": "Качване",
     "finalizingUpload": "Финализиране на качването",
-    "imageQuestion": "снимка?"
+    "imageQuestion": "снимка?",
+    "retryingUpload": "Мрежов проблем — нов опит ({{attempt}} от {{total}})…",
+    "waitingForConnection": "Няма интернет връзка. Изчакване на повторно свързване…"
   },
   "interiorItems": {
     "captureImage": "Заснеми снимка",
@@ -663,6 +665,8 @@
     "totalCost": "Обща цена",
     "station": "Станция",
     "mpgThisTank": "Мили на галон",
-    "done": "Готово"
+    "done": "Готово",
+    "retryingUpload": "Мрежов проблем — нов опит ({{attempt}} от {{total}})…",
+    "waitingForConnection": "Няма интернет връзка. Изчакване на повторно свързване…"
   }
 }

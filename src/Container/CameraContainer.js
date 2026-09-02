@@ -89,6 +89,9 @@ const CameraContainer = ({ route, navigation }) => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isExpiryInspectionVisible, setIsExpiryInspectionVisible] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [retryAttempt, setRetryAttempt] = useState(0);
+  const [isWaitingForConnection, setIsWaitingForConnection] = useState(false);
+  const isUploadCancelled = useRef(false);
   const [isUploadFailed, setIsUploadFailed] = useState(isUploadFailedInitialState);
   const { type, modalDetails, inspectionId } = route.params;
   const format = useCameraFormat(device, [{ videoResolution: { width: 1280, height: 720 }, photoResolution: { width: 1280, height: 720 } }, { fps: 60 }]);
@@ -155,14 +158,23 @@ const CameraContainer = ({ route, navigation }) => {
   }, [isGuidanceTypeScreen, shouldSkipGuidanceModal]);
 
   function resetAllStates() {
+    isUploadCancelled.current = true;
     setIsImageURL('');
     setIsImageFile({});
     setIsModalVisible(false);
     setProgress(0);
+    setRetryAttempt(0);
+    setIsWaitingForConnection(false);
     setIsExpiryInspectionVisible(false);
     setOrientation(defaultOrientation);
     setIsUploadFailed(isUploadFailedInitialState);
   }
+
+  const uploadOptions = {
+    onRetry: attempt => setRetryAttempt(attempt),
+    onWaitingForConnection: isWaiting => setIsWaitingForConnection(isWaiting),
+    isCancelled: () => isUploadCancelled.current,
+  };
 
   function handle_Hardware_Back_Press() {
     if (isImageURL) {
@@ -242,6 +254,9 @@ const CameraContainer = ({ route, navigation }) => {
 
 
   const handleRetryPress = () => {
+    isUploadCancelled.current = true;
+    setRetryAttempt(0);
+    setIsWaitingForConnection(false);
     setIsImageURL('');
     setIsImageFile({});
   };
@@ -296,7 +311,7 @@ const CameraContainer = ({ route, navigation }) => {
     }
 
     try {
-      await uploadFile(c => uploadImageToStore(c, image_url), body, inspectionId, token, handleError, dispatch);
+      await uploadFile(c => uploadImageToStore(c, image_url), body, inspectionId, token, handleError, dispatch, uploadOptions);
     } catch (error) {
       console.log('handleResponse error:', error);
       onUploadFailed(error);
@@ -304,6 +319,11 @@ const CameraContainer = ({ route, navigation }) => {
   };
 
   function onUploadFailed(error) {
+    setRetryAttempt(0);
+    setIsWaitingForConnection(false);
+    if (isUploadCancelled.current) {
+      return;
+    }
     const { statusCode = null } = error?.response?.data || {};
     const { message } = error;
     const { title = uploadFailed.title, message: msg = uploadFailed.message } = newInspectionUploadError(statusCode || '');
@@ -358,6 +378,8 @@ const CameraContainer = ({ route, navigation }) => {
 
   const handleError = (inspectionDeleted = false) => {
     setIsUploadFailed(isUploadFailedInitialState);
+    setRetryAttempt(0);
+    setIsWaitingForConnection(false);
     if (inspectionDeleted === true) {
       setIsExpiryInspectionVisible(true);
     } else {
@@ -369,6 +391,9 @@ const CameraContainer = ({ route, navigation }) => {
     let extension = isImageFile.path.split('.').pop() || 'jpeg';
     const mime = 'image/' + extension;
     setIsModalVisible(true);
+    isUploadCancelled.current = false;
+    setRetryAttempt(0);
+    setIsWaitingForConnection(false);
     const normalizedPath = Platform.OS === 'ios' ? await fixImageOrientation(isImageFile.path) : isImageFile.path;
 
     try {
@@ -385,8 +410,11 @@ const CameraContainer = ({ route, navigation }) => {
         variant || 0,
         'app',
         data?.companyId,
-        category
+        category,
+        uploadOptions
       );
+      setRetryAttempt(0);
+      setIsWaitingForConnection(false);
     } catch (error) {
       onUploadFailed(error);
     }
@@ -439,6 +467,8 @@ const CameraContainer = ({ route, navigation }) => {
           source={source ? source : { uri: isImageURL }}
           title={title}
           progress={progress}
+          retryAttempt={retryAttempt}
+          isWaitingForConnection={isWaitingForConnection}
           handleNavigationBackPress={handleNavigationBackPress}
           isExterior={checkRelevantType(groupType)}
           isCarVerification={groupType === INSPECTION.carVerificiationItems}

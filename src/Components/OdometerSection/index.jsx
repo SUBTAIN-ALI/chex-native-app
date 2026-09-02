@@ -9,6 +9,7 @@ import AppText from '../text';
 import {ROUTES} from '../../Navigation/ROUTES';
 import {OdometerDetails, getCurrentDate} from '../../Utils';
 import {ai_Mileage_Extraction, deleteImageFromDatabase, uploadFileToDatabase} from '../../services/inspection';
+import {withRetry} from '../../Utils/retry';
 import {removeVehicleImage, setMileage, setMileageMessage, setMileageVisible, updateVehicleImage} from '../../Store/Actions';
 import {styles} from './styles';
 
@@ -67,7 +68,7 @@ const OdometerSection = ({handleMediaModalDetailsPress}) => {
         companyConfigId: null,
       };
       try {
-        const response = await uploadFileToDatabase(inspectionId, body);
+        const response = await withRetry(() => uploadFileToDatabase(inspectionId, body), {label: 'odometer-file-record'});
         return response?.data?.id ?? null;
       } catch (err) {
         console.log('Odometer image upload failed:', err?.response?.data || err?.message);

@@ -383,7 +383,9 @@
     "alertMessage": "Por favor, resalte el daño y seleccione un nivel de gravedad para continuar. Ambos son obligatorios.",
     "uploading": "Subiendo",
     "finalizingUpload": "Finalizando subida",
-    "imageQuestion": "¿imagen?"
+    "imageQuestion": "¿imagen?",
+    "retryingUpload": "Problema de red: reintentando ({{attempt}} de {{total}})…",
+    "waitingForConnection": "Sin conexión a internet. Esperando reconexión…"
   },
   "interiorItems": {
     "captureImage": "Capturar imagen",
@@ -671,6 +673,8 @@
     "totalCost": "Costo total",
     "station": "Estación",
     "mpgThisTank": "Millas por galón",
-    "done": "Listo"
+    "done": "Listo",
+    "retryingUpload": "Problema de red: reintentando ({{attempt}} de {{total}})…",
+    "waitingForConnection": "Sin conexión a internet. Esperando reconexión…"
   }
 }

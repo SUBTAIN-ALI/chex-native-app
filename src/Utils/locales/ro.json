@@ -383,7 +383,9 @@
     "alertMessage": "Te rugăm să evidențiezi dauna și să selectezi un nivel de severitate pentru a continua. Ambele sunt obligatorii.",
     "uploading": "Se încarcă",
     "finalizingUpload": "Se finalizează încărcarea",
-    "imageQuestion": "imagine?"
+    "imageQuestion": "imagine?",
+    "retryingUpload": "Problemă de rețea — se reia ({{attempt}} din {{total}})…",
+    "waitingForConnection": "Fără conexiune la internet. Se așteaptă reconectarea…"
   },
   "interiorItems": {
     "captureImage": "Capturează imagine",
@@ -671,6 +673,8 @@
     "totalCost": "Cost total",
     "station": "Stație",
     "mpgThisTank": "Mile pe galon",
-    "done": "Gata"
+    "done": "Gata",
+    "retryingUpload": "Problemă de rețea — se reia ({{attempt}} din {{total}})…",
+    "waitingForConnection": "Fără conexiune la internet. Se așteaptă reconectarea…"
   }
 }

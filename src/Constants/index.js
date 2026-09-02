@@ -32,7 +32,7 @@ const ENV_TYPE_URL = {
 
 const version = '1';
 export const API_VERSION_PATH = '/api/v' + version + '/';
-export const API_BASE_URL = ENV_TYPE_URL.production;
+export const API_BASE_URL = ENV_TYPE_URL.staging;
 export const generateApiUrl = path => API_BASE_URL + API_VERSION_PATH + path;
 console.log('API_BASE_URL', API_BASE_URL);
 export const S3_BUCKET_BASEURL = process.env.S3_BUCKET_BASEURL;
@@ -391,6 +391,17 @@ export const customSortOrder = {
   ],
   tires: ['left_front_tire', 'left_rear_tire', 'right_front_tire', 'right_rear_tire'],
 };
+export const MAX_UPLOAD_RETRIES = 3;
+export const RETRY_BASE_DELAY_MS = 1000;
+export const RETRY_MAX_DELAY_MS = 8000;
+
+export const UPLOAD_REQUEST_TIMEOUT = 30000;
+export const S3_UPLOAD_TIMEOUT = 60000;
+
+export const CONNECTION_PROBE_INTERVAL_MS = 2000;
+export const CONNECTION_PROBE_TIMEOUT_MS = 5000;
+export const OFFLINE_WAIT_TIMEOUT_MS = 120000;
+
 export const darkImageError = {
   get title() {
     return i18n.t('errors.darkImageError.title');

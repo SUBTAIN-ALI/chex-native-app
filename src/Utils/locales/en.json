@@ -383,7 +383,9 @@
     "alertMessage": "Please highlight the damage and select a severity level to proceed. Both are required.",
     "uploading": "Uploading",
     "finalizingUpload": "Finalizing Upload",
-    "imageQuestion": "image?"
+    "imageQuestion": "image?",
+    "retryingUpload": "Network issue — retrying ({{attempt}} of {{total}})…",
+    "waitingForConnection": "No internet connection. Waiting to reconnect…"
   },
   "interiorItems": {
     "captureImage": "Capture Image",
@@ -671,6 +673,8 @@
     "totalCost": "Total cost",
     "station": "Station",
     "mpgThisTank": "MPG this tank",
-    "done": "Done"
+    "done": "Done",
+    "retryingUpload": "Network issue — retrying ({{attempt}} of {{total}})…",
+    "waitingForConnection": "No internet connection. Waiting to reconnect…"
   }
 }

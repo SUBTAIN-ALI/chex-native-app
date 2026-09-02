@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AI_API_TOKEN, API_ENDPOINTS, EXTRACT_NUMBER_PLATE_WITH_AI, generateApiUrl, MILEAGE_EXTRACTION, nightImageCheckAI } from '../Constants';
+import { AI_API_TOKEN, API_ENDPOINTS, EXTRACT_NUMBER_PLATE_WITH_AI, generateApiUrl, MILEAGE_EXTRACTION, nightImageCheckAI, UPLOAD_REQUEST_TIMEOUT } from '../Constants';
 import { generateRandomString } from '../Utils';
 import api from './api';
 
@@ -206,9 +206,9 @@ export const s3SignedUrl = async (type = '', source = '', inspectionId = '', cat
   // const data = {type};
 
   try {
-    return await api.post(UPLOAD_URL, data);
+    return await api.post(UPLOAD_URL, data, { timeout: UPLOAD_REQUEST_TIMEOUT });
   } catch (error) {
-    console.error('Getting s3 signed url error:', error);
+    console.error('Getting s3 signed url error:', error?.response?.data || error?.message);
     throw error;
   }
 };
@@ -217,9 +217,9 @@ export const uploadFileToDatabase = async (inspectionId, body) => {
   const endPoint = generateApiUrl(`vehicle/${inspectionId}/file`);
 
   try {
-    return await api.post(endPoint, body);
+    return await api.post(endPoint, body, { timeout: UPLOAD_REQUEST_TIMEOUT });
   } catch (error) {
-    console.error('uploadFileToDatabase error:', error.response.data);
+    console.error('uploadFileToDatabase error:', error?.response?.data || error?.message);
     throw error;
   }
 };
@@ -322,7 +322,7 @@ export const inspectionSubmission = async (inspectionId = '', companyId = '', dr
 
 export const isImageDarkWithAI = async image_url => {
   const body = { image_url };
-  const config = { headers: { api_token: AI_API_TOKEN } };
+  const config = { headers: { api_token: AI_API_TOKEN }, timeout: UPLOAD_REQUEST_TIMEOUT };
   try {
     return await api.post(nightImageCheckAI, body, config);
   } catch (error) {

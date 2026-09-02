@@ -44,6 +44,14 @@ const VideoContainer = ({route, navigation}) => {
   const [counter, setCounter] = useState(30);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [retryAttempt, setRetryAttempt] = useState(0);
+  const [isWaitingForConnection, setIsWaitingForConnection] = useState(false);
+  const isUploadCancelled = useRef(false);
+  const uploadOptions = {
+    onRetry: attempt => setRetryAttempt(attempt),
+    onWaitingForConnection: isWaiting => setIsWaitingForConnection(isWaiting),
+    isCancelled: () => isUploadCancelled.current,
+  };
   const {type, modalDetails, inspectionId} = route.params;
   const {subCategory, instructionalText, source, title, isVideo, groupType} = modalDetails;
   const {selectedVehicleKind} = useSelector(state => state.newInspection);
@@ -137,6 +145,9 @@ const VideoContainer = ({route, navigation}) => {
     }
   };
   const handleRetryPress = () => {
+    isUploadCancelled.current = true;
+    setRetryAttempt(0);
+    setIsWaitingForConnection(false);
     setIsRecording(false);
     setIsVideoURI('');
     setIsVideoFile({});
@@ -169,7 +180,7 @@ const VideoContainer = ({route, navigation}) => {
       groupType: groupType,
       dateImage: getCurrentDate(),
     };
-    await uploadFile(uploadVideoToStore, body, inspectionId, token, handleError, dispatch);
+    await uploadFile(uploadVideoToStore, body, inspectionId, token, handleError, dispatch, uploadOptions);
   };
   function uploadVideoToStore(imageID) {
     dispatch(updateVehicleImage(groupType, type, isVideoURI, imageID));
@@ -178,12 +189,22 @@ const VideoContainer = ({route, navigation}) => {
   const handleError = () => {
     setIsModalVisible(false);
     setProgress(0);
+    setRetryAttempt(0);
+    setIsWaitingForConnection(false);
   };
   const handleNextPress = () => {
     setIsModalVisible(true);
+    isUploadCancelled.current = false;
+    setRetryAttempt(0);
+    setIsWaitingForConnection(false);
     const path = isVideoFile.path.replace('file://', '');
 
-    getSignedUrl(token, 'video/mp4', path, setProgress, handleResponse, handleError, dispatch).then();
+    getSignedUrl(token, 'video/mp4', path, setProgress, handleResponse, handleError, dispatch, undefined, undefined, 0, 'app', undefined, undefined, uploadOptions)
+      .then(() => {
+        setRetryAttempt(0);
+        setIsWaitingForConnection(false);
+      })
+      .catch(error => console.log('Video upload failed:', error?.message));
   };
 
   return (
@@ -196,6 +217,8 @@ const VideoContainer = ({route, navigation}) => {
           source={source}
           title={title}
           progress={progress}
+          retryAttempt={retryAttempt}
+          isWaitingForConnection={isWaitingForConnection}
           handleNavigationBackPress={handleNavigationBackPress}
           // handleVisible={handleVisible}
         />

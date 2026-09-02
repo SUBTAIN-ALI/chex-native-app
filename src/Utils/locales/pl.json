@@ -383,7 +383,9 @@
     "alertMessage": "Proszę zaznacz uszkodzenie i wybierz stopień nasilenia, aby kontynuować. Oba są wymagane.",
     "uploading": "Przesyłanie",
     "finalizingUpload": "Finalizowanie przesyłania",
-    "imageQuestion": "zdjęcie?"
+    "imageQuestion": "zdjęcie?",
+    "retryingUpload": "Problem z siecią — ponawianie ({{attempt}} z {{total}})…",
+    "waitingForConnection": "Brak połączenia z internetem. Oczekiwanie na ponowne połączenie…"
   },
   "interiorItems": {
     "captureImage": "Zrób zdjęcie",
@@ -671,6 +673,8 @@
     "totalCost": "Całkowity koszt",
     "station": "Stacja",
     "mpgThisTank": "Mile na galon",
-    "done": "Gotowe"
+    "done": "Gotowe",
+    "retryingUpload": "Problem z siecią — ponawianie ({{attempt}} z {{total}})…",
+    "waitingForConnection": "Brak połączenia z internetem. Oczekiwanie na ponowne połączenie…"
   }
 }

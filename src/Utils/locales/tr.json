@@ -383,7 +383,9 @@
     "alertMessage": "Devam etmek için lütfen hasarı vurgulayın ve bir önem düzeyi seçin. Her ikisi de zorunludur.",
     "uploading": "Yükleniyor",
     "finalizingUpload": "Yükleme Tamamlanıyor",
-    "imageQuestion": "resim?"
+    "imageQuestion": "resim?",
+    "retryingUpload": "Ağ sorunu — yeniden deneniyor ({{attempt}} / {{total}})…",
+    "waitingForConnection": "İnternet bağlantısı yok. Yeniden bağlanmayı bekliyor…"
   },
   "interiorItems": {
     "captureImage": "Fotoğraf Çek",
@@ -671,6 +673,8 @@
     "totalCost": "Toplam maliyet",
     "station": "İstasyon",
     "mpgThisTank": "Galon başına mil",
-    "done": "Tamam"
+    "done": "Tamam",
+    "retryingUpload": "Ağ sorunu — yeniden deneniyor ({{attempt}} / {{total}})…",
+    "waitingForConnection": "İnternet bağlantısı yok. Yeniden bağlanmayı bekliyor…"
   }
 }

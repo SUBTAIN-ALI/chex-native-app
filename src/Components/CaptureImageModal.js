@@ -9,7 +9,7 @@ import { Cross, Expand, Info } from '../Assets/Icons';
 import { colors } from '../Assets/Styles';
 import { PrimaryGradientButton, RequiredIndicator, Sub_Heading } from './index';
 import Collapse from '../Assets/Icons/Collapse';
-import { Platforms } from '../Constants';
+import { MAX_UPLOAD_RETRIES, Platforms } from '../Constants';
 import { headerFlex, headerFlexGrow, headerTextBottom, imageHeight, instructionsContainerTop } from '../Utils/helpers';
 
 import { useTranslation } from 'react-i18next';
@@ -41,6 +41,9 @@ const CaptureImageModal = ({
   isExterior = true,
   labelRequired = null,
   inspectionScreen = false,
+  retryAttempt = 0,
+  retryLimit = MAX_UPLOAD_RETRIES,
+  isWaitingForConnection = false,
 }) => {
   const { t } = useTranslation();
   const { fileRequired = null } = useSelector(state => state.newInspection);
@@ -62,6 +65,14 @@ const CaptureImageModal = ({
   );
 
   const normalizedProgressValue = Math.min(Math.max(progress / 100, 0), 1); // clamp
+  const isRetrying = retryAttempt > 0;
+  let loadingText = progress === 100 ? t('annotation.finalizingUpload') : t('annotation.uploading');
+  if (isRetrying) {
+    loadingText = t('annotation.retryingUpload', { attempt: retryAttempt, total: retryLimit });
+  }
+  if (isWaitingForConnection) {
+    loadingText = t('annotation.waitingForConnection');
+  }
   return (
     <Modal
       animationType="slide"
@@ -152,7 +163,7 @@ const CaptureImageModal = ({
               formatText={() => `${progress}%`}
               textStyle={{ fontWeight: 'bold', color: colors.white }}
             />
-            <Text style={[styles.textColor, styles.loadingText]}>{progress === 100 ? t('annotation.finalizingUpload') : t('annotation.uploading')}</Text>
+            <Text style={[styles.textColor, styles.loadingText, (isRetrying || isWaitingForConnection) && styles.retryingText]}>{loadingText}</Text>
           </View>
         ) : (
           <View style={styles.body}>
@@ -251,6 +262,11 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: hp('1.8%'),
     paddingTop: hp('1%'),
+    textAlign: 'center',
+    paddingHorizontal: wp('8%'),
+  },
+  retryingText: {
+    color: orangePeel,
   },
   iconContainer: {
     position: 'absolute',

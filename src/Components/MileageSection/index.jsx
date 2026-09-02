@@ -15,6 +15,7 @@ import {
   uploadFileToDatabase,
 } from '../../services/inspection';
 import { setMileage, setMileageMessage, setMileageVisible } from '../../Store/Actions';
+import { withRetry } from '../../Utils/retry';
 import { styles } from './styles';
 
 const sanitize = text => (text || '').replace(/[^0-9]/g, '');
@@ -92,7 +93,7 @@ const MileageSection = ({ returnTo, index = 1 }) => {
         companyConfigId: null,
       };
       try {
-        const response = await uploadFileToDatabase(inspectionId, body);
+        const response = await withRetry(() => uploadFileToDatabase(inspectionId, body), { label: 'odometer-file-record' });
         return response?.data?.id ?? null;
       } catch (err) {
         console.log('Odometer image upload failed:', err?.response?.data || err?.message);

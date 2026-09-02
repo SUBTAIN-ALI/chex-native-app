@@ -9,7 +9,7 @@ import { ROUTES } from '../../../Navigation/ROUTES';
 import { fixImageOrientation, getSignedUrl } from '../../../Utils';
 import { styles } from './styles';
 import { getMileage, updateFuelEvent } from '../../../Store/Actions';
-import { S3_BUCKET_BASEURL } from '../../../Constants';
+import { MAX_UPLOAD_RETRIES, S3_BUCKET_BASEURL } from '../../../Constants';
 
 const CaptureOdometerScreen = ({ navigation, route }) => {
   const { t } = useTranslation();
@@ -30,7 +30,18 @@ const CaptureOdometerScreen = ({ navigation, route }) => {
   const [capturedS3Key, setCapturedS3Key] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [retryAttempt, setRetryAttempt] = useState(0);
+  const [isWaitingForConnection, setIsWaitingForConnection] = useState(false);
+  const isUploadCancelled = useRef(false);
   const [showResult, setShowResult] = useState(false);
+
+  const uploadOptions = {
+    onRetry: attempt => setRetryAttempt(attempt),
+    onWaitingForConnection: isWaiting => setIsWaitingForConnection(isWaiting),
+    isCancelled: () => isUploadCancelled.current,
+  };
+
+  useEffect(() => () => { isUploadCancelled.current = true; }, []);
 
   useEffect(() => {
     const initPermission = async () => {
@@ -52,6 +63,11 @@ const CaptureOdometerScreen = ({ navigation, route }) => {
   const handleUploadError = () => {
     setIsUploading(false);
     setProgress(0);
+    setRetryAttempt(0);
+    setIsWaitingForConnection(false);
+    if (isUploadCancelled.current) {
+      return;
+    }
     Alert.alert(t('fuelVerification.uploadFailedTitle'), t('fuelVerification.uploadFailedOdometer'));
   };
 
@@ -106,6 +122,9 @@ const CaptureOdometerScreen = ({ navigation, route }) => {
       const normalizedUri = photo.path.startsWith('file://') ? photo.path : `file://${photo.path}`;
       setCapturedImageUri(normalizedUri);
       setIsUploading(true);
+      isUploadCancelled.current = false;
+      setRetryAttempt(0);
+      setIsWaitingForConnection(false);
 
       const extension = photo.path.split('.').pop() || 'jpeg';
       const mime = `image/${extension}`;
@@ -124,8 +143,11 @@ const CaptureOdometerScreen = ({ navigation, route }) => {
         variant || 0,
         'app',
         data?.companyId,
-        'CarVerification'
+        'CarVerification',
+        uploadOptions
       );
+      setRetryAttempt(0);
+      setIsWaitingForConnection(false);
     } catch (error) {
       setIsUploading(false);
       Alert.alert(t('fuelVerification.captureFailedTitle'), t('fuelVerification.captureFailedOdometer'));
@@ -166,7 +188,13 @@ const CaptureOdometerScreen = ({ navigation, route }) => {
           {isUploading ? (
             <View style={styles.uploadingContainer}>
               <ActivityIndicator size="small" color="#1D4ED8" />
-              <AppText style={styles.uploadingText}>{t('fuelVerification.uploadingWithProgress', { progress })}</AppText>
+              <AppText style={styles.uploadingText}>
+                {isWaitingForConnection
+                  ? t('fuelVerification.waitingForConnection')
+                  : retryAttempt > 0
+                    ? t('fuelVerification.retryingUpload', { attempt: retryAttempt, total: MAX_UPLOAD_RETRIES })
+                    : t('fuelVerification.uploadingWithProgress', { progress })}
+              </AppText>
             </View>
           ) : null}
 

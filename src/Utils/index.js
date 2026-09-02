@@ -5,13 +5,14 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import * as yup from 'yup';
 
 import { IMAGES } from '../Assets/Images';
-import { customSortOrder, darkImageError, INSPECTION, INSPECTION_SUBCATEGORY, S3_BUCKET_BASEURL, uploadFailed, VEHICLE_TYPES } from '../Constants';
+import { customSortOrder, darkImageError, INSPECTION, INSPECTION_SUBCATEGORY, S3_BUCKET_BASEURL, S3_UPLOAD_TIMEOUT, uploadFailed, VEHICLE_TYPES } from '../Constants';
 import { ROUTES, TABS } from '../Navigation/ROUTES';
 import { getInspectionDetails, isImageDarkWithAI, s3SignedUrl, uploadFileToDatabase } from '../services/inspection';
 import { store } from '../Store';
 import { batchUpdateVehicleImages, numberPlateSelected, sessionExpired, setCompanyId } from '../Store/Actions';
 import { setFileDetails, setVehicleTypeModalVisible } from '../Store/Actions/NewInspectionAction';
 import { checkAndCompleteUrl } from './helpers';
+import { assertUploadResponseOk, isExpiredSignatureError, isRetryableError, markNonRetryable, withRetry } from './retry';
 import imageResizer from '@bam.tech/react-native-image-resizer';
 import i18n from 'i18next';
 
@@ -358,11 +359,26 @@ export const getSignedUrl = async (
   variant = 0,
   source = 'app',
   companyId,
-  category
+  category,
+  uploadOptions = {}
 ) => {
+  const { onRetry = null, onWaitingForConnection = null, isCancelled = null } = uploadOptions;
+  const requestSignedUrl = () =>
+    withRetry(() => s3SignedUrl(mime, source, inspectionId, categoryName, variant, companyId), {
+      onRetry,
+      onWaitingForConnection,
+      isCancelled,
+      label: 'signed-url',
+    });
+
   try {
-    const response = await s3SignedUrl(mime, source, inspectionId, categoryName, variant, companyId);
-    await onGetSignedUrlSuccess(response, path, mime, setProgress, handleResponse, handleError, dispatch, category);
+    const response = await requestSignedUrl();
+    await onGetSignedUrlSuccess(response, path, mime, setProgress, handleResponse, handleError, dispatch, category, {
+      onRetry,
+      onWaitingForConnection,
+      isCancelled,
+      refreshSignedUrl: requestSignedUrl,
+    });
   } catch (error) {
     console.log('error', error);
 
@@ -370,17 +386,22 @@ export const getSignedUrl = async (
     throw error;
   }
 };
-async function onGetSignedUrlSuccess(res, path, mime, setProgress, handleResponse, handleError, dispatch, category) {
+async function onGetSignedUrlSuccess(res, path, mime, setProgress, handleResponse, handleError, dispatch, category, uploadOptions = {}) {
   try {
     const { url, key } = res.data;
-    await uploadToS3(url, key, path, mime, setProgress, handleResponse, handleError, dispatch, category);
+    await uploadToS3(url, key, path, mime, setProgress, handleResponse, handleError, dispatch, category, uploadOptions);
   } catch (error) {
     throw error;
   }
 }
 function onGetSignedUrlFail(error, handleError, dispatch) { }
 
-export const uploadToS3 = async (preSignedUrl, key, path, mime, setProgress, handleResponse, handleError, _, category) => {
+export const uploadToS3 = async (preSignedUrl, key, path, mime, setProgress, handleResponse, handleError, _, category, uploadOptions = {}) => {
+  const { onRetry = null, onWaitingForConnection = null, isCancelled = null, refreshSignedUrl = null } = uploadOptions;
+  let signedUrl = preSignedUrl;
+  let uploadKey = key;
+  let needsFreshSignedUrl = false;
+
   try {
     // Normalize path (strip file://)
     const normalizedPath = path.replace(/^file:\/\//, '');
@@ -400,44 +421,72 @@ export const uploadToS3 = async (preSignedUrl, key, path, mime, setProgress, han
       ...(size ? { 'Content-Length': String(size) } : {}),
     };
 
-    const task = ReactNativeBlobUtil.fetch('PUT', preSignedUrl, headers, ReactNativeBlobUtil.wrap(path));
+    await withRetry(
+      async () => {
+        if (needsFreshSignedUrl && refreshSignedUrl) {
+          try {
+            const { url: freshUrl, key: freshKey } = (await refreshSignedUrl())?.data || {};
+            if (freshUrl) {
+              signedUrl = freshUrl;
+              uploadKey = freshKey || uploadKey;
+            }
+          } catch (e) {
+            console.log('Could not refresh the pre-signed url before retrying:', e?.message);
+          }
+          needsFreshSignedUrl = false;
+        }
 
-    // Start with 0
-    setProgress(0);
+        const task = ReactNativeBlobUtil.config({ timeout: S3_UPLOAD_TIMEOUT }).fetch('PUT', signedUrl, headers, ReactNativeBlobUtil.wrap(path));
 
-    // Progress listener
-    task.uploadProgress({ interval: 100 }, (written, totalFromCb) => {
-      const total = totalFromCb && totalFromCb > 0 ? totalFromCb : size;
-      if (total > 0) {
-        const pct = Math.min(99, Math.round((written * 100) / total));
-        setProgress(pct);
+        // Start with 0
+        setProgress(0);
+
+        // Progress listener
+        task.uploadProgress({ interval: 100 }, (written, totalFromCb) => {
+          const total = totalFromCb && totalFromCb > 0 ? totalFromCb : size;
+          if (total > 0) {
+            const pct = Math.min(99, Math.round((written * 100) / total));
+            setProgress(pct);
+          }
+        });
+
+        // Wait for upload to finish
+        return assertUploadResponseOk(await task);
+      },
+      {
+        onRetry: (attempt, retries, error) => {
+          needsFreshSignedUrl = isExpiredSignatureError(error);
+          onRetry?.(attempt, retries, error);
+        },
+        shouldRetry: error => isRetryableError(error) || isExpiredSignatureError(error),
+        onWaitingForConnection,
+        isCancelled,
+        label: 'upload-to-s3',
       }
-    });
-
-    // Wait for upload to finish
-    await task;
+    );
 
     // Force 100 at the end
     setProgress(100);
 
-    await onUploadToS3Success(handleResponse, key, handleError, category, mime);
+    await onUploadToS3Success(handleResponse, uploadKey, handleError, category, mime, { onRetry, onWaitingForConnection, isCancelled });
   } catch (error) {
     handleError?.(error);
     throw error;
   }
 };
 
-async function onUploadToS3Success(handleResponse, key, handleError, category, mime) {
+async function onUploadToS3Success(handleResponse, key, handleError, category, mime, uploadOptions = {}) {
+  const { onRetry = null, onWaitingForConnection = null, isCancelled = null } = uploadOptions;
   const image_url = S3_BUCKET_BASEURL + key;
 
   try {
     if (!SKIP_NIGHT_IMAGE_LIST.includes(category) && mime !== 'video/mp4') {
       const {
         data: { status = false },
-      } = await isImageDarkWithAI(image_url);
+      } = await withRetry(() => isImageDarkWithAI(image_url), { onRetry, onWaitingForConnection, isCancelled, label: 'night-image-check' });
 
       if (!status) {
-        throw new Error(darkImageError.message);
+        throw markNonRetryable(new Error(darkImageError.message));
       }
     }
 
@@ -447,9 +496,16 @@ async function onUploadToS3Success(handleResponse, key, handleError, category, m
   }
 }
 
-export const uploadFile = async (callback, body, inspectionId, token, handleError, dispatch) => {
+export const uploadFile = async (callback, body, inspectionId, token, handleError, dispatch, uploadOptions = {}) => {
+  const { onRetry = null, onWaitingForConnection = null, isCancelled = null } = uploadOptions;
+
   try {
-    const response = await uploadFileToDatabase(inspectionId, body);
+    const response = await withRetry(() => uploadFileToDatabase(inspectionId, body), {
+      onRetry,
+      onWaitingForConnection,
+      isCancelled,
+      label: 'file-record',
+    });
     onUploadFileSuccess(response, callback);
   } catch (error) {
     console.log('uploadFile error:', error);
