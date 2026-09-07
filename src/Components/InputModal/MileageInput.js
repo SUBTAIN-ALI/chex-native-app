@@ -49,8 +49,17 @@ const MileageInput = ({ crossButtonColor = colors.orangePeel }) => {
   const persistedMileage = isDetailForThisInspection
     ? String(inspectionDetail?.mileage ?? '').trim()
     : '';
-  const hasSavedMileage =
+  const wasMileageSaved =
     savedInSession || (!!persistedMileage && persistedMileage !== '0');
+
+  // The submit gate reads the STORE copy of the mileage (`hasValidMileage` in
+  // NewInspectionContainer / DVIRInspectionChecklistContainer), and re-opening the modal
+  // overwrites it with the prefill — an empty one (failed OCR after retaking the odometer
+  // image) wipes it. So a mileage saved earlier isn't enough on its own: the value that
+  // would be left behind has to be a real one, otherwise closing hides the submit button
+  // again with nothing explaining why.
+  const hasMileageValue = Number(removeAlphabets(String(mileage || ''))) > 0;
+  const hasSavedMileage = wasMileageSaved && hasMileageValue;
 
   // Odometer is a configured category — same predicate the submit gate uses
   // (see NewInspectionContainer `requiresMileage` / DVIR `requiresOdometer`).
