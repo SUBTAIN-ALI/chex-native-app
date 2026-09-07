@@ -657,7 +657,15 @@ const DVIRInspectionChecklistContainer = ({ navigation, route }) => {
 
     // Keep the store copy of the inspection in sync when this screen is entered
     // directly (i.e. without file_Details having run for this inspection).
-    dispatch(setInspectionDetail(response?.data?.inspection || null));
+    const inspection = response?.data?.inspection || null;
+    dispatch(setInspectionDetail(inspection));
+
+    // Same rehydration file_Details does: without it a mileage saved earlier is lost on a
+    // fresh start, so hasValidMileage stays false and the submit button never shows.
+    const savedMileage = inspection?.mileage;
+    if (savedMileage) {
+      dispatch(setMileage(savedMileage));
+    }
 
     if (files.length > 0) {
       // ----- ODOMETER (car verification) ----- surface it to MileageSection via Redux.

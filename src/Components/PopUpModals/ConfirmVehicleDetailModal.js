@@ -38,9 +38,16 @@ const ConfirmVehicleDetailModal = ({
   const [numberPlate, setNumberPlate] = useState(numberPlateText);
   const text_Limit = numberPlate.length + '/' + textLimit;
 
+  // Re-seed the input from the source of truth every time the modal opens. The component
+  // stays mounted while hidden, so a value the user typed — or cleared — and then dismissed
+  // with the cross would otherwise still be sitting there on the next open.
   useEffect(() => {
+    if (!visible) {
+      return;
+    }
     handleInputChange(numberPlateText);
-  }, [numberPlateText]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [numberPlateText, visible]);
 
   const onTouchDismissKeyboard = () => Keyboard.dismiss();
   function clearState() {

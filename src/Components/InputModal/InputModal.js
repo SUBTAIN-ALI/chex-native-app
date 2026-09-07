@@ -19,6 +19,7 @@ const InputModal = ({
   defaultValue = '',
   crossButtonColor,
   crossButtonStyle,
+  dismissible = true,
 }) => {
   const {[valueKey]: value = '', [`${valueKey}Visible`]: visible = false} =
     useSelector(state => state.newInspection);
@@ -26,6 +27,9 @@ const InputModal = ({
   const dispatch = useDispatch();
 
   // Close the modal without submitting (cross / ✕ button).
+  // Not passed down when `dismissible` is false, so the modal can only be
+  // closed by a successful submit (ConfirmVehicleDetailModal hides the cross
+  // when it gets no handler).
   const onCrossPress = useCallback(() => {
     dispatch(actionCreator());
   }, [dispatch, actionCreator]);
@@ -47,7 +51,7 @@ const InputModal = ({
       description={description}
       isLoading={isLoading}
       onConfirmPress={onSubmitPress}
-      onCrossPress={onCrossPress}
+      onCrossPress={dismissible ? onCrossPress : undefined}
       numberPlateText={value || defaultValue || ''}
       textLimit={20}
       textLength={value?.length || defaultValue?.length || '0'}

@@ -32,7 +32,7 @@ const ENV_TYPE_URL = {
 
 const version = '1';
 export const API_VERSION_PATH = '/api/v' + version + '/';
-export const API_BASE_URL = ENV_TYPE_URL.staging;
+export const API_BASE_URL = ENV_TYPE_URL.production;
 export const generateApiUrl = path => API_BASE_URL + API_VERSION_PATH + path;
 console.log('API_BASE_URL', API_BASE_URL);
 export const S3_BUCKET_BASEURL = process.env.S3_BUCKET_BASEURL;
