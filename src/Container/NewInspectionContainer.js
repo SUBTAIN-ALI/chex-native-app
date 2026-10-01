@@ -186,6 +186,10 @@ const NewInspectionContainer = ({ route, navigation }) => {
     handleIsAllVehicleParts();
 
     if (route.params) {
+      // OdometerSection lives in the Interior card and saves the returned capture on mount; keep it mounted.
+      if (route.params.isMileageCapture) {
+        setSelectedOption(prevState => ({ ...prevState, isInterior: true }));
+      }
       const { isLicensePlate, isOdometer, displayAnnotation, fileId, annotationDetails, is_Exterior, routeName } = route.params;
       if (routeName !== ROUTES.VEHICLE_INFORMATION) {
         setTimeout(() => {

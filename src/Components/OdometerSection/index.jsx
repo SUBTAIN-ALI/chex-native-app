@@ -5,15 +5,19 @@ import {useDispatch, useSelector} from 'react-redux';
 import {useTranslation} from 'react-i18next';
 
 import ImagePicker_New from '../ItemPicker/ImagePicker_New';
+import DiscardInspectionModal from '../PopUpModals/DiscardInspectionModal';
 import AppText from '../text';
 import {ROUTES} from '../../Navigation/ROUTES';
-import {OdometerDetails, getCurrentDate} from '../../Utils';
+import {OdometerDetails, getCurrentDate, handle_Session_Expired, newInspectionUploadError} from '../../Utils';
 import {ai_Mileage_Extraction, deleteImageFromDatabase, uploadFileToDatabase} from '../../services/inspection';
 import {withRetry} from '../../Utils/retry';
 import {removeVehicleImage, setMileage, setMileageMessage, setMileageVisible, updateVehicleImage} from '../../Store/Actions';
 import {styles} from './styles';
 
 const sanitize = text => (text || '').replace(/[^0-9]/g, '');
+const uploadFailedInitialState = {visible: false, title: '', message: '', canRetry: false};
+// Retrying these can't succeed: the inspection expired (403) or the image is a duplicate (409).
+const NON_RETRYABLE_STATUS_CODES = [403, 409];
 
 const OdometerSection = ({handleMediaModalDetailsPress}) => {
   const {t} = useTranslation();
@@ -34,7 +38,10 @@ const OdometerSection = ({handleMediaModalDetailsPress}) => {
 
   const [loading, setLoading] = useState(false);
   const [imageUri, setImageUri] = useState(existingOdometerUrl);
+  const [uploadFailedState, setUploadFailedState] = useState(uploadFailedInitialState);
   const fileIdRef = useRef(existingOdometerID);
+  // Capture whose file record failed to save; the image is already on S3, so a retry only re-sends the record.
+  const pendingUploadRef = useRef(null);
 
   useEffect(() => {
     if (existingOdometerUrl) {
@@ -55,7 +62,7 @@ const OdometerSection = ({handleMediaModalDetailsPress}) => {
   const uploadOdometerImage = useCallback(
     async (s3Key, mime) => {
       if (!s3Key || !inspectionId) {
-        return null;
+        return {id: null, error: null};
       }
       const body = {
         category: OdometerDetails.subCategory,
@@ -69,52 +76,99 @@ const OdometerSection = ({handleMediaModalDetailsPress}) => {
       };
       try {
         const response = await withRetry(() => uploadFileToDatabase(inspectionId, body), {label: 'odometer-file-record'});
-        return response?.data?.id ?? null;
+        const id = response?.data?.id ?? null;
+        return {id, error: id ? null : new Error('Odometer file record returned no id')};
       } catch (err) {
         console.log('Odometer image upload failed:', err?.response?.data || err?.message);
-        return null;
+        return {id: null, error: err};
       }
     },
     [inspectionId, vehicle_Type]
   );
 
-  const processCapturedOdometer = useCallback(
-    async ({capturedImageUri, capturedImageMime, capturedImageS3Key}) => {
-      if (!inspectionId) {
+  const handleUploadFailed = useCallback(
+    error => {
+      const statusCode = error?.response?.data?.statusCode || error?.response?.status || null;
+      if (statusCode === 401) {
+        pendingUploadRef.current = null;
+        handle_Session_Expired(statusCode, dispatch);
         return;
       }
+      const {title, message} = newInspectionUploadError(statusCode || '');
+      setUploadFailedState({visible: true, title, message, canRetry: !NON_RETRYABLE_STATUS_CODES.includes(statusCode)});
+    },
+    [dispatch]
+  );
+
+  // Saves the file record for an image already on S3. The mileage modal only opens once the
+  // image is saved, so the driver never enters a mileage for a photo the server doesn't have.
+  const saveCapturedOdometer = useCallback(
+    async (capture, mileagePrefillPromise) => {
+      const {capturedImageUri, capturedImageMime, capturedImageS3Key} = capture;
+
+      // Snapshot the OLD id now, before any async work begins
+      const previousFileId = fileIdRef.current;
 
       setLoading(true);
       setImageUri(capturedImageUri);
 
-      // ✅ FIX 2: snapshot the OLD id NOW, before any async work begins
-      const previousFileId = fileIdRef.current;
+      const {id: newFileId, error} = await uploadOdometerImage(capturedImageS3Key, capturedImageMime);
 
-      // Kick off upload and OCR in parallel
-      const imageUploadPromise = uploadOdometerImage(capturedImageS3Key, capturedImageMime);
-
-      try {
-        const response = await ai_Mileage_Extraction(capturedImageUri);
-        const {mileage, status = false} = response?.data || {};
-        openMileageModal(status === true && mileage ? sanitize(String(mileage)) : '');
-      } catch (err) {
-        openMileageModal('');
-      } finally {
-        // ✅ FIX 2 cont: resolve the new id, then update the ref, THEN delete the old one
-        const newFileId = await imageUploadPromise;
-        fileIdRef.current = newFileId;
-        if (newFileId) {
-          dispatch(updateVehicleImage(OdometerDetails.groupType, OdometerDetails.key, capturedImageUri, newFileId));
-        }
-
-        if (previousFileId && previousFileId !== newFileId) {
-          deleteImageFromDatabase(previousFileId).catch(err => console.log('Odometer image delete failed:', err?.response?.data || err?.message));
-        }
+      if (!newFileId) {
+        // Not saved: show what the server still has, keep its id, and offer a retry.
+        setImageUri(existingOdometerUrl);
+        fileIdRef.current = previousFileId;
+        pendingUploadRef.current = {capture, mileagePrefillPromise};
         setLoading(false);
+        handleUploadFailed(error);
+        return;
       }
+
+      pendingUploadRef.current = null;
+      fileIdRef.current = newFileId;
+      dispatch(updateVehicleImage(OdometerDetails.groupType, OdometerDetails.key, capturedImageUri, newFileId));
+
+      if (previousFileId && previousFileId !== newFileId) {
+        deleteImageFromDatabase(previousFileId).catch(err => console.log('Odometer image delete failed:', err?.response?.data || err?.message));
+      }
+
+      openMileageModal(await mileagePrefillPromise);
+      setLoading(false);
     },
-    [dispatch, inspectionId, uploadOdometerImage, openMileageModal]
+    [dispatch, existingOdometerUrl, uploadOdometerImage, openMileageModal, handleUploadFailed]
   );
+
+  const processCapturedOdometer = useCallback(
+    async capture => {
+      if (!inspectionId) {
+        return;
+      }
+
+      // OCR runs alongside the save; its result is used only once the image is saved.
+      const mileagePrefillPromise = ai_Mileage_Extraction(capture.capturedImageUri)
+        .then(response => {
+          const {mileage, status = false} = response?.data || {};
+          return status === true && mileage ? sanitize(String(mileage)) : '';
+        })
+        .catch(() => '');
+
+      await saveCapturedOdometer(capture, mileagePrefillPromise);
+    },
+    [inspectionId, saveCapturedOdometer]
+  );
+
+  const handleRetryUpload = useCallback(() => {
+    setUploadFailedState(uploadFailedInitialState);
+    const pending = pendingUploadRef.current;
+    if (pending) {
+      saveCapturedOdometer(pending.capture, pending.mileagePrefillPromise);
+    }
+  }, [saveCapturedOdometer]);
+
+  const handleDismissUploadFailed = useCallback(() => {
+    setUploadFailedState(uploadFailedInitialState);
+    pendingUploadRef.current = null;
+  }, []);
 
   useEffect(() => {
     const {isMileageCapture, capturedImageUri, capturedImageMime, capturedImageS3Key} = route?.params || {};
@@ -193,6 +247,16 @@ const OdometerSection = ({handleMediaModalDetailsPress}) => {
           />
         </View>
       </View>
+      {uploadFailedState.visible && (
+        <DiscardInspectionModal
+          title={uploadFailedState.title}
+          description={uploadFailedState.message}
+          yesButtonText={uploadFailedState.canRetry ? t('common.retry') : t('common.ok')}
+          onYesPress={uploadFailedState.canRetry ? handleRetryUpload : handleDismissUploadFailed}
+          dualButton={uploadFailedState.canRetry}
+          onNoPress={handleDismissUploadFailed}
+        />
+      )}
     </View>
   );
 };
