@@ -185,7 +185,7 @@ const CaptureReceiptScreen = ({ navigation, route }) => {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.contentContainer}>
           <View style={styles.odometerCameraWrap}>
             {!capturedImageUri && hasPermission && device ? (
-              <Camera ref={cameraRef} style={styles.odometerCameraPreview} device={device} isActive photo />
+              <Camera ref={cameraRef} style={styles.odometerCameraPreview} device={device} isActive photo photoQualityBalance="quality" />
             ) : capturedImageUri ? (
               <Image source={{ uri: capturedImageUri }} style={styles.odometerCapturedImage} />
             ) : (

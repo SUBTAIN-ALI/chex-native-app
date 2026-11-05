@@ -94,7 +94,12 @@ const CameraContainer = ({ route, navigation }) => {
   const isUploadCancelled = useRef(false);
   const [isUploadFailed, setIsUploadFailed] = useState(isUploadFailedInitialState);
   const { type, modalDetails, inspectionId } = route.params;
-  const format = useCameraFormat(device, [{ videoResolution: { width: 1280, height: 720 }, photoResolution: { width: 1280, height: 720 } }, { fps: 60 }]);
+  // const format = useCameraFormat(device, [{ videoResolution: { width: 1280, height: 720 }, photoResolution: { width: 1280, height: 720 } }, { fps: 60 }]);
+  const format = useCameraFormat(device, [
+    { photoResolution: 'max' },
+    { videoResolution: { width: 1920, height: 1080 } },
+    { fps: 30 },
+  ]);
   const [isLoading, setIsLoading] = useState(false);
   const [orientation, setOrientation] = useState(defaultOrientation);
   const [isGuidanceModalVisible, setIsGuidanceModalVisible] = useState(true);
@@ -509,11 +514,13 @@ const CameraContainer = ({ route, navigation }) => {
                       style={StyleSheet.absoluteFill}
                       device={device}
                       photo={true}
+                      photoQualityBalance="quality"
                       audio={false}
                       isActive={isFocused && appState.current === 'active'}
-                      enableZoomGesture={true}
+                      enableZoomGesture={false}
                       includeBase64={true}
                       format={format}
+                      fps={30}
                     />
                   </View>
                 </View>
@@ -529,11 +536,13 @@ const CameraContainer = ({ route, navigation }) => {
                     style={StyleSheet.absoluteFill}
                     device={device}
                     photo={true}
+                    photoQualityBalance="quality"
                     audio={false}
                     isActive={isFocused && appState.current === 'active'}
-                    enableZoomGesture={true}
+                    enableZoomGesture={false}
                     includeBase64={true}
                     format={format}
+                    fps={30}
                   />
                 </>
               )

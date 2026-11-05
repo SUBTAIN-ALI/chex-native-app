@@ -92,6 +92,7 @@ const autoCropToPreview = async photo => {
     const cropData = {
       offset: {x: cropX, y: cropY},
       size: {width: cropW, height: cropH},
+      quality: 1,
     };
 
     const croppedUri = await ImageEditor.cropImage(sourceUri, cropData);
