@@ -1,6 +1,6 @@
 import { useIsFocused } from '@react-navigation/native';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, BackHandler, Platform, StatusBar, StyleSheet, TouchableOpacity, View, Text } from 'react-native';
 import FastImage from 'react-native-fast-image';
 import ImagePicker from 'react-native-image-crop-picker';
@@ -9,6 +9,7 @@ import { Camera, useCameraDevice, useCameraFormat } from 'react-native-vision-ca
 import { useDispatch, useSelector } from 'react-redux';
 
 import { BackArrow } from '../Assets/Icons';
+import Flashlight from '../Assets/Icons/Flashlight';
 import { getVehicleFrames } from '../Assets/Images';
 import { colors, PreviewStyles } from '../Assets/Styles';
 import {CameraFooter, CameraPreview, CaptureImageModal, DiscardInspectionModal, ExpiredInspectionModal, OdometerGuidanceModal} from '../Components';
@@ -51,6 +52,7 @@ import {
 import { navigateBackWithParams, styleMapping, switchFrameIcon, switchOrientation } from '../Utils/helpers';
 import { useTranslation } from 'react-i18next';
 import autoResizeAndCrop from '../Components/ItemPicker/AutoResizeAndCrop';
+import { deviceWithDetailedPreview } from '../Utils/cameraFormat';
 
 const { white } = colors;
 const defaultOrientation = 'portrait';
@@ -80,6 +82,7 @@ const CameraContainer = ({ route, navigation }) => {
   const cameraRef = useRef(null);
   const appState = useRef(AppState.currentState);
   const [selectedCamera, setSelectedCamera] = useState('back');
+  const [isTorchOn, setIsTorchOn] = useState(false);
   const device = useCameraDevice(selectedCamera, {
     physicalDevices: PHYSICAL_DEVICES,
   });
@@ -95,9 +98,19 @@ const CameraContainer = ({ route, navigation }) => {
   const [isUploadFailed, setIsUploadFailed] = useState(isUploadFailedInitialState);
   const { type, modalDetails, inspectionId } = route.params;
   // const format = useCameraFormat(device, [{ videoResolution: { width: 1280, height: 720 }, photoResolution: { width: 1280, height: 720 } }, { fps: 60 }]);
-  const format = useCameraFormat(device, [
+  const formatDevice = useMemo(
+    () => Platform.OS === 'ios' ? deviceWithDetailedPreview(device) : device,
+    [device]
+  );
+  const photoFormat = useCameraFormat(formatDevice, [{ photoResolution: 'max' }]);
+  const format = useCameraFormat(formatDevice, [
     { photoResolution: 'max' },
-    { videoResolution: { width: 1920, height: 1080 } },
+    // Keep the uncropped live feed aligned with the full photo's field of view.
+    ...(!inspectionScreen && photoFormat
+      ? [{ videoAspectRatio: photoFormat.photoWidth / photoFormat.photoHeight }]
+      : []),
+    // iOS renders this stream in the live preview; prefer full detail when enlarged.
+    { videoResolution: Platform.OS === 'ios' ? 'max' : { width: 1920, height: 1080 } },
     { fps: 30 },
   ]);
   const [isLoading, setIsLoading] = useState(false);
@@ -136,6 +149,7 @@ const CameraContainer = ({ route, navigation }) => {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       appState.current = nextAppState;
+      if (nextAppState !== 'active') { setIsTorchOn(false); }
     });
 
     return () => {
@@ -153,6 +167,10 @@ const CameraContainer = ({ route, navigation }) => {
   useEffect(() => {
     setSelectedCamera(SWITCH_CAMERA[isBackCamera]);
   }, [isBackCamera, device]);
+
+  useEffect(() => {
+    setIsTorchOn(false);
+  }, [isFocused, device?.id]);
 
   useEffect(() => {
     if (isGuidanceTypeScreen && !shouldSkipGuidanceModal) {
@@ -202,7 +220,10 @@ const CameraContainer = ({ route, navigation }) => {
 
   const handleNavigationBackPress = () => goBack();
 
-  const handleSwitchCamera = () => setIsBackCamera(!isBackCamera);
+  const handleSwitchCamera = () => {
+    setIsTorchOn(false);
+    setIsBackCamera(!isBackCamera);
+  };
   const handleDismissOdometerModal = (isChecked = false) => {
     if (isChecked) {
       handleDoNotShowOdometerModal();
@@ -238,6 +259,7 @@ const CameraContainer = ({ route, navigation }) => {
       if (!cameraRef.current) { return; }
 
       const photo = await cameraRef.current.takePhoto();
+      setIsTorchOn(false);
 
       if (inspectionScreen) {
         const cropped = await autoResizeAndCrop(photo);
@@ -515,6 +537,7 @@ const CameraContainer = ({ route, navigation }) => {
                       device={device}
                       photo={true}
                       photoQualityBalance="quality"
+                      torch={device?.hasTorch && isTorchOn && isFocused && appState.current === 'active' ? 'on' : 'off'}
                       audio={false}
                       isActive={isFocused && appState.current === 'active'}
                       enableZoomGesture={false}
@@ -534,9 +557,11 @@ const CameraContainer = ({ route, navigation }) => {
                   <Camera
                     ref={cameraRef}
                     style={StyleSheet.absoluteFill}
+                    resizeMode="cover"
                     device={device}
                     photo={true}
                     photoQualityBalance="quality"
+                    torch={device?.hasTorch && isTorchOn && isFocused && appState.current === 'active' ? 'on' : 'off'}
                     audio={false}
                     isActive={isFocused && appState.current === 'active'}
                     enableZoomGesture={false}
@@ -560,6 +585,17 @@ const CameraContainer = ({ route, navigation }) => {
             <TouchableOpacity onPress={handleNavigationBackPress}>
               <BackArrow height={hp('8%')} width={wp('8%')} color={white} />
             </TouchableOpacity>
+            {device?.hasTorch && (
+              <TouchableOpacity
+                onPress={() => setIsTorchOn(value => !value)}
+                accessibilityRole="switch"
+                accessibilityLabel={t('common.flashlight')}
+                accessibilityState={{ checked: isTorchOn }}
+                style={styles.flashlightButton}
+              >
+                <Flashlight enabled={isTorchOn} color={white} />
+              </TouchableOpacity>
+            )}
           </View>
 
           <CameraFooter
@@ -632,6 +668,14 @@ const CameraContainer = ({ route, navigation }) => {
   );
 };
 const styles = StyleSheet.create({
+  flashlightButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   captureInstructionBox: {
     paddingHorizontal: wp('4%'),
     paddingVertical: hp('0.8%'),

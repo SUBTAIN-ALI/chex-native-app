@@ -33,7 +33,7 @@ const CameraPreview = ({ isImageURL, handleNavigationBackPress, handleRetryPress
           <FastImage
             source={{ uri: isImageURL }}
             priority={'normal'}
-            resizeMode={'contain'}
+            resizeMode={'cover'}
             style={[StyleSheet.absoluteFillObject, { borderRadius: 10 }]}
           />
         </View>

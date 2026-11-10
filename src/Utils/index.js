@@ -374,6 +374,7 @@ export const getSignedUrl = async (
 
   try {
     const response = await requestSignedUrl();
+    console.log('S3 image upload:', { inspectionId, category, categoryName, variant, path, mime, key: response.data.key });
     await onGetSignedUrlSuccess(response, path, mime, setProgress, handleResponse, handleError, dispatch, category, {
       onRetry,
       onWaitingForConnection,
