@@ -9,7 +9,7 @@ import { Platforms } from '../../Constants';
 const { OS } = Platform;
 const { IOS } = Platforms;
 
-const PreviewFooter = ({ onRetryPress, onNextPress }) => {
+const PreviewFooter = ({ onRetryPress, onNextPress, isUploading = false }) => {
   const { t } = useTranslation();
 
   return (
@@ -23,6 +23,7 @@ const PreviewFooter = ({ onRetryPress, onNextPress }) => {
         text={t('common.next')}
         buttonStyle={styles.button}
         onPress={onNextPress}
+        buttonDisabled={isUploading}
       />
     </View>
   );

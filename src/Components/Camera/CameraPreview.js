@@ -11,7 +11,7 @@ const { white, cobaltBlueLight } = colors;
 const { recordingPreviewContainer, headerContainer, videoContainer } = PreviewStyles;
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const CameraPreview = ({ isImageURL, handleNavigationBackPress, handleRetryPress, handleNextPress, inspectionScreen }) => {
+const CameraPreview = ({ isImageURL, handleNavigationBackPress, handleRetryPress, handleNextPress, inspectionScreen, isUploading = false }) => {
   return (
     <View style={recordingPreviewContainer}>
       <View style={headerContainer}>
@@ -38,7 +38,7 @@ const CameraPreview = ({ isImageURL, handleNavigationBackPress, handleRetryPress
           />
         </View>
       )}
-      <PreviewFooter onRetryPress={handleRetryPress} onNextPress={handleNextPress} />
+      <PreviewFooter onRetryPress={handleRetryPress} onNextPress={handleNextPress} isUploading={isUploading} />
       <StatusBar backgroundColor={cobaltBlueLight} barStyle="light-content" translucent={true} />
     </View>
   );

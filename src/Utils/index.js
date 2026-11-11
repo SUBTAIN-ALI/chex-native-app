@@ -499,15 +499,8 @@ async function onUploadToS3Success(handleResponse, key, handleError, category, m
 }
 
 export const uploadFile = async (callback, body, inspectionId, token, handleError, dispatch, uploadOptions = {}) => {
-  const { onRetry = null, onWaitingForConnection = null, isCancelled = null } = uploadOptions;
-
   try {
-    const response = await withRetry(() => uploadFileToDatabase(inspectionId, body), {
-      onRetry,
-      onWaitingForConnection,
-      isCancelled,
-      label: 'file-record',
-    });
+    const response = await uploadFileToDatabase(inspectionId, body);
     onUploadFileSuccess(response, callback);
   } catch (error) {
     console.log('uploadFile error:', error);

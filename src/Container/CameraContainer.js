@@ -95,6 +95,7 @@ const CameraContainer = ({ route, navigation }) => {
   const [retryAttempt, setRetryAttempt] = useState(0);
   const [isWaitingForConnection, setIsWaitingForConnection] = useState(false);
   const isUploadCancelled = useRef(false);
+  const isUploadInProgress = useRef(false);
   const [isUploadFailed, setIsUploadFailed] = useState(isUploadFailedInitialState);
   const { type, modalDetails, inspectionId } = route.params;
   // const format = useCameraFormat(device, [{ videoResolution: { width: 1280, height: 720 }, photoResolution: { width: 1280, height: 720 } }, { fps: 60 }]);
@@ -182,6 +183,7 @@ const CameraContainer = ({ route, navigation }) => {
 
   function resetAllStates() {
     isUploadCancelled.current = true;
+    isUploadInProgress.current = false;
     setIsImageURL('');
     setIsImageFile({});
     setIsModalVisible(false);
@@ -282,6 +284,7 @@ const CameraContainer = ({ route, navigation }) => {
 
   const handleRetryPress = () => {
     isUploadCancelled.current = true;
+    isUploadInProgress.current = false;
     setRetryAttempt(0);
     setIsWaitingForConnection(false);
     setIsImageURL('');
@@ -415,6 +418,8 @@ const CameraContainer = ({ route, navigation }) => {
   };
 
   const handleNextPress = async () => {
+    if (isUploadInProgress.current) return;
+    isUploadInProgress.current = true;
     let extension = isImageFile.path.split('.').pop() || 'jpeg';
     const mime = 'image/' + extension;
     setIsModalVisible(true);
@@ -443,6 +448,7 @@ const CameraContainer = ({ route, navigation }) => {
       setRetryAttempt(0);
       setIsWaitingForConnection(false);
     } catch (error) {
+      isUploadInProgress.current = false;
       onUploadFailed(error);
     }
   };
@@ -511,6 +517,7 @@ const CameraContainer = ({ route, navigation }) => {
           isImageURL={isImageURL}
           orientation={isImageFile?.orientation}
           inspectionScreen={inspectionScreen}
+          isUploading={isModalVisible}
         />
       ) : (
         <View style={container}>
