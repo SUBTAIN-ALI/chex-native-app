@@ -1,7 +1,6 @@
 module.exports = {
   presets: ['module:@react-native/babel-preset'],
   plugins: [
-    'react-native-worklets/plugin',
     [
       'module:react-native-dotenv',
       {
@@ -10,5 +9,17 @@ module.exports = {
         path: '.env',
       },
     ],
+  ],
+  // Keep the two worklet runtimes' transforms isolated.
+  overrides: [
+    {
+      test: /(?:Features[\/]CameraAlignment|node_modules[\/](?:react-native-vision-camera|vision-camera-resize-plugin|react-native-worklets-core))[\/]/,
+      plugins: ['react-native-worklets-core/plugin'],
+    },
+    {
+      exclude:
+        /(?:Features[\/]CameraAlignment|node_modules[\/](?:react-native-vision-camera|vision-camera-resize-plugin|react-native-worklets-core))[\/]/,
+      plugins: ['react-native-worklets/plugin'],
+    },
   ],
 };
