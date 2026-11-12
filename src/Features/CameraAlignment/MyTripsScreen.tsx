@@ -4,7 +4,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {useIsFocused} from '@react-navigation/native';
 import {Camera, useCameraDevice, useCameraFormat, useCameraPermission} from 'react-native-vision-camera';
 import {useTensorflowModel, type TensorflowPlugin} from 'react-native-fast-tflite';
-import {bottleTarget} from './alignment';
+import {detectionOptions, Target} from './alignment';
 import {MAX_RESULT_AGE_MS, useObjectDetection} from './useObjectDetection';
 
 type ButtonProps = {title: string; onPress: () => void; disabled?: boolean};
@@ -20,7 +20,7 @@ function Button({title, onPress, disabled = false}: ButtonProps) {
     </Pressable>
   );
 }
-function LiveCamera({onPhoto, onClose, width, height, plugin}: {onPhoto: (uri: string) => void; onClose: () => void; width: number; height: number; plugin: TensorflowPlugin}) {
+function LiveCamera({onPhoto, onClose, width, height, plugin, target}: {onPhoto: (uri: string) => void; onClose: () => void; width: number; height: number; plugin: TensorflowPlugin; target: Target}) {
   const camera = useRef<Camera>(null);
   const mounted = useRef(true);
   const busy = useRef(false);
@@ -29,7 +29,7 @@ function LiveCamera({onPhoto, onClose, width, height, plugin}: {onPhoto: (uri: s
   const [cameraError, setCameraError] = useState('');
   const device = useCameraDevice('back');
   const format = useCameraFormat(device, [{photoResolution: 'max'}, {videoResolution: {width: 1280, height: 720}}, {fps: 30}]);
-  const detection = useObjectDetection(plugin, width, height);
+  const detection = useObjectDetection(plugin, width, height, target);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -65,7 +65,7 @@ function LiveCamera({onPhoto, onClose, width, height, plugin}: {onPhoto: (uri: s
       }
     }
   };
-  const frame = bottleTarget.frame;
+  const frame = target.frame;
   const green = canCapture;
   return (
     <View style={styles.fill}>
@@ -124,6 +124,8 @@ export default function MyTripsScreen() {
   const [size, setSize] = useState({width: 0, height: 0});
   const {hasPermission, requestPermission} = useCameraPermission();
   const plugin = useTensorflowModel(require('../../Assets/Models/efficientdet_lite0.tflite'));
+  const [selectedKey, setSelectedKey] = useState(detectionOptions[0].key);
+  const activeTarget = detectionOptions.find(o => o.key === selectedKey)!.target;
   useEffect(() => {
     const listener = AppState.addEventListener('change', state => setActive(state === 'active'));
     return () => listener.remove();
@@ -142,7 +144,8 @@ export default function MyTripsScreen() {
     });
     return () => subscription.remove();
   }, [focused, open, uri]);
-  const launch = async () => {
+  const launch = async (key: string) => {
+    setSelectedKey(key);
     if (hasPermission || (await requestPermission())) {
       setUri('');
       setOpen(true);
@@ -157,7 +160,7 @@ export default function MyTripsScreen() {
         <View style={styles.fill}>
           <Image source={{uri}} resizeMode="contain" style={styles.fill} />
           <View style={styles.controls}>
-            <Button title="Retake" onPress={launch} />
+            <Button title="Retake" onPress={() => launch(selectedKey)} />
             <Button
               title="Done"
               onPress={() => {
@@ -179,15 +182,17 @@ export default function MyTripsScreen() {
                 setOpen(false);
               }}
               onClose={() => setOpen(false)}
+              target={activeTarget}
             />
           )}
         </View>
       ) : (
         <View style={styles.home}>
           <Text style={styles.title}>My Trip</Text>
-          <Text style={styles.description}>Phone alignment demo</Text>
-          <Text style={styles.description}>Fit a phone inside the guide and hold steady. Capture becomes available when the frame turns green.</Text>
-          <Button title="Open alignment camera" onPress={launch} />
+          <Text style={styles.description}>Choose an object to inspect. Fit it inside the guide frame and hold steady — capture unlocks when the frame turns green.</Text>
+          {detectionOptions.map(opt => (
+            <Button key={opt.key} title={opt.label} onPress={() => launch(opt.key)} />
+          ))}
           {!!permissionMessage && (
             <>
               <Text style={styles.description}>{permissionMessage}</Text>

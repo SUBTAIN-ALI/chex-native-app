@@ -25,6 +25,53 @@ export const bottleTarget: Target = {
   maxSize: 1.2,
   requiredStableDetections: 4,
 };
+export const personTarget: Target = {
+  objectClass: 'person',
+  frame: {x: 0.25, y: 0.05, width: 0.50, height: 0.90},
+  minConfidence: 0.40,
+  minIoU: 0.60,
+  maxCenterOffset: 0.10,
+  minSize: 0.70,
+  maxSize: 1.30,
+  requiredStableDetections: 4,
+};
+export const carTarget: Target = {
+  objectClass: 'car',
+  frame: {x: 0.05, y: 0.20, width: 0.90, height: 0.55},
+  minConfidence: 0.40,
+  minIoU: 0.60,
+  maxCenterOffset: 0.10,
+  minSize: 0.70,
+  maxSize: 1.30,
+  requiredStableDetections: 4,
+};
+export const motorcycleTarget: Target = {
+  objectClass: 'motorcycle',
+  frame: {x: 0.08, y: 0.20, width: 0.84, height: 0.60},
+  minConfidence: 0.35,
+  minIoU: 0.60,
+  maxCenterOffset: 0.10,
+  minSize: 0.70,
+  maxSize: 1.30,
+  requiredStableDetections: 4,
+};
+export const chairTarget: Target = {
+  objectClass: 'chair',
+  frame: {x: 0.15, y: 0.15, width: 0.70, height: 0.65},
+  minConfidence: 0.35,
+  minIoU: 0.60,
+  maxCenterOffset: 0.10,
+  minSize: 0.70,
+  maxSize: 1.30,
+  requiredStableDetections: 4,
+};
+export const detectionOptions: {key: string; label: string; target: Target}[] = [
+  {key: 'cell phone', label: 'Phone', target: bottleTarget},
+  {key: 'person', label: 'Person', target: personTarget},
+  {key: 'car', label: 'Car', target: carTarget},
+  {key: 'motorcycle', label: 'Motorcycle', target: motorcycleTarget},
+  {key: 'chair', label: 'Chair', target: chairTarget},
+];
 export const searching: Result = {state: 'SEARCHING', message: 'Place the object inside the frame.', count: 0};
 export function iou(a: Box, b: Box): number {
   const area =
