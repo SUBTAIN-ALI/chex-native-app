@@ -85,8 +85,8 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         vectorDrawables.useSupportLibrary = true
-        versionCode 126
-        versionName "7.1"
+        versionCode 127
+        versionName "7.2"
     }
     signingConfigs {
       release {

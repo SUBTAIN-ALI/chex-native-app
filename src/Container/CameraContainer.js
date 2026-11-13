@@ -524,7 +524,7 @@ const CameraContainer = ({ route, navigation }) => {
           {isImageURL ? (
             <FastImage priority={'normal'} resizeMode={'stretch'} style={[StyleSheet.absoluteFill, { borderRadius: 25 }]} source={{ uri: isImageURL }} />
           ) : (
-            selectedCamera && (
+            device && (
               inspectionScreen ? (
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                   {haveFrame && (
@@ -541,7 +541,7 @@ const CameraContainer = ({ route, navigation }) => {
                     <Camera
                       ref={cameraRef}
                       style={StyleSheet.absoluteFill}
-                      device={device}
+                      device={formatDevice}
                       photo={true}
                       photoQualityBalance="quality"
                       torch={device?.hasTorch && isTorchOn && isFocused && appState.current === 'active' ? 'on' : 'off'}
@@ -565,7 +565,7 @@ const CameraContainer = ({ route, navigation }) => {
                     ref={cameraRef}
                     style={StyleSheet.absoluteFill}
                     resizeMode="cover"
-                    device={device}
+                    device={formatDevice}
                     photo={true}
                     photoQualityBalance="quality"
                     torch={device?.hasTorch && isTorchOn && isFocused && appState.current === 'active' ? 'on' : 'off'}
