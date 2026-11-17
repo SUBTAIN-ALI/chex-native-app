@@ -148,7 +148,7 @@ export const ExteriorLeftDetails = {
   instructionalSubHeadingText: '',
   get buttonText() { return i18n.t('exteriorItems.captureNow'); },
   category: 'Exterior',
-  subCategory: 'exterior_left',
+  subCategory: 'exterior_left_side',
   groupType: INSPECTION.exteriorItems,
   isVideo: false,
 };
@@ -161,7 +161,7 @@ export const ExteriorRightDetails = {
   instructionalSubHeadingText: '',
   get buttonText() { return i18n.t('exteriorItems.captureNow'); },
   category: 'Exterior',
-  subCategory: 'exterior_right',
+  subCategory: 'exterior_right_side',
   groupType: INSPECTION.exteriorItems,
   isVideo: false,
 };

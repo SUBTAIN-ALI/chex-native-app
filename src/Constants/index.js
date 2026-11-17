@@ -34,7 +34,7 @@ const version = '1';
 export const API_VERSION_PATH = '/api/v' + version + '/';
 export const API_BASE_URL = ENV_TYPE_URL.staging;
 export const generateApiUrl = path => API_BASE_URL + API_VERSION_PATH + path;
-console.log('API_BASE_URL', API_BASE_URL);
+console.log('API_BASE_URL is', API_BASE_URL);
 export const S3_BUCKET_BASEURL = process.env.S3_BUCKET_BASEURL;
 export const EXTRACT_NUMBER_PLATE_WITH_AI = process.env.EXTRACT_NUMBER_PLATE_URL;
 export const nightImageCheckAI = process.env.NIGHT_IMAGE_CHECK;
@@ -100,9 +100,11 @@ export const INSPECTION_SUBCATEGORY = {
   exterior_left: 'exteriorLeft',
   exterior_left_1: 'exteriorLeft_1',
   exterior_left_2: 'exteriorLeft_2',
+  exterior_left_side: 'exteriorLeft',
   exterior_right: 'exteriorRight',
   exterior_right_1: 'exteriorRight_1',
   exterior_right_2: 'exteriorRight_2',
+  exterior_right_side: 'exteriorRight',
   front_left_corner: 'exteriorFrontLeftCorner',
   front_left_corner_1: 'exteriorFrontLeftCorner_1',
   front_left_corner_2: 'exteriorFrontLeftCorner_2',
@@ -356,10 +358,12 @@ export const customSortOrder = {
     'exterior_left0',
     'exterior_left1',
     'exterior_left2',
+    'exterior_left_side',
     'exterior_right',
     'exterior_right0',
     'exterior_right1',
     'exterior_right2',
+    'exterior_right_side',
     'exterior_front',
     'exterior_front0',
     'exterior_front1',

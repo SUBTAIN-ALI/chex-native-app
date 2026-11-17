@@ -456,11 +456,11 @@
       "instruction": "Please upload a photo clearly showing the rear of the vehicle "
     },
     "left": {
-      "title": "Exterior Left",
+      "title": "Exterior Left Side",
       "instruction": "Please take a photo clearly capturing the entire exterior left side of the vehicle"
     },
     "right": {
-      "title": "Exterior Right",
+      "title": "Exterior Right Side",
       "instruction": "Please take a photo clearly capturing the entire exterior right side of the vehicle"
     },
     "frontLeftCorner": {
